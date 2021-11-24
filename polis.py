@@ -43,6 +43,23 @@ def set_feature( df ):
 
     return df_selection
 
+def filtro_geral( df_selection ):
+    # ---- SIDEBAR ----
+    st.sidebar.header( "Filtro Global:" )
+
+    fil_dose = st.sidebar.multiselect( "Escolha as Doses:",
+                                       options=df["nova_dose"].unique(),
+                                       default=df["nova_dose"].unique() )
+
+    fil_vacina = st.sidebar.multiselect( "Escolha o Tipo da Vacina:",
+                                        options=df["vacina_nome"].unique(),
+                                         default=df["vacina_nome"].unique() )
+
+    df_selection = df_selection.query( "nova_dose == @fil_dose & "
+                                       "vacina_nome ==@fil_vacina" )
+
+    return df_selection
+
 
 # --------------------------------------------------------------- TOP ----
 def overview_data( df_selection ):
@@ -212,11 +229,6 @@ def temp_dose( df_selection ):
         with see_data:
             st.dataframe(data=df_new)
 
-#------------------- FILTRO
-    fil_dose = st.multiselect( "Escolha as Doses:",
-                                       options=df["nova_dose"].unique(),
-                                       default=df["nova_dose"].unique() )
-    df_selection = df_selection.query( "nova_dose == @fil_dose" )
 
 # ------------------- PREPARAÇÂO DOS DADOS - 1.2A - Variação Mensal da Aplicação das Doses:
     df_line = df_selection.groupby(['meses_aplicacao']).sum().reset_index()
@@ -743,12 +755,14 @@ if __name__ == "__main__":
     # Transformation -----------------
     df_selection = set_feature( df )
 
+    df_selection = filtro_geral( df_selection )
+
 
     overview_data( df_selection )
 
     pie_ind_popvac( df_selection )
 
-    df_selection = temp_dose( df_selection )
+    temp_dose( df_selection )
 
     #bar_fun_vacina( df_selection )
 
