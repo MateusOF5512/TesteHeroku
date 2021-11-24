@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
+from datetime import datetime
 #import folium
 #from streamlit_folium import folium_static
 #from folium.plugins   import MarkerCluster
@@ -31,7 +32,6 @@ def set_feature( df ):
     df['Coronavac']   = np.where(df['vacina_nome'] == 'Coronavac', 1, 0)
     df['Janssen']     = np.where(df['vacina_nome'] == 'Janssen', 1, 0)
 
-
     df['BRANCA']         = np.where(df['paciente_racacor_valor'] == 'BRANCA', 1, 0)
     df['PRETA']          = np.where(df['paciente_racacor_valor'] == 'PRETA', 1, 0)
     df['PARDA']          = np.where(df['paciente_racacor_valor'] == 'PARDA', 1, 0)
@@ -39,24 +39,60 @@ def set_feature( df ):
     df['INDIGENA']       = np.where(df['paciente_racacor_valor'] == 'INDIGENA', 1, 0)
     df['SEM INFORMACAO'] = np.where(df['paciente_racacor_valor'] == 'SEM INFORMACAO', 1, 0)
 
-    df_selection= df
 
-    return df_selection
 
-def filtro_geral( df_selection ):
+    return df
+
+def filtro_geral( df ):
     # ---- SIDEBAR ----
-    st.sidebar.header( "Filtro Global:" )
+    st.sidebar.title("Filtro Global")
+    st.sidebar.header("1 - Campanha de Vacinação")
 
-    fil_dose = st.sidebar.multiselect( "Escolha as Doses:",
+    fil_dose = st.sidebar.multiselect( "Selecione as doses:",
                                        options=df["nova_dose"].unique(),
-                                       default=df["nova_dose"].unique() )
+                                       default=df["nova_dose"].unique())
 
-    fil_vacina = st.sidebar.multiselect( "Escolha o Tipo da Vacina:",
-                                        options=df["vacina_nome"].unique(),
-                                         default=df["vacina_nome"].unique() )
+    fil_vacina = st.sidebar.multiselect( "Selecione as vacinas:",
+                                         options=df["vacina_nome"].unique(),
+                                         default=df["vacina_nome"].unique())
 
-    df_selection = df_selection.query( "nova_dose == @fil_dose & "
-                                       "vacina_nome ==@fil_vacina" )
+    min_mes = int(df["meses_aplicacao"].min())
+    max_mes = int(df["meses_aplicacao"].max())
+    fil_mesvac = st.sidebar.slider( "Selecione o intervalo de meses:",
+                                    min_value=min_mes,
+                                    max_value=max_mes,
+                                    value=(min_mes, max_mes) )
+
+    min_data = datetime.strptime(df["vacina_dataaplicacao"].min(), "%Y-%m-%d")
+    max_data = datetime.strptime(df["vacina_dataaplicacao"].max(), "%Y-%m-%d")
+    fil_datavac = st.sidebar.slider( "Selecione o intervalo de dias:",
+                                     min_value=min_data,
+                                     max_value=max_data,
+                                     value=(min_data, max_data) )
+
+    st.sidebar.header("2 - Características dos Vacinados")
+    fil_sex = st.sidebar.multiselect( "Selecione o sexo biológico:",
+                                         options=df["paciente_enumsexobiologico"].unique(),
+                                         default=df["paciente_enumsexobiologico"].unique())
+
+    fil_raca = st.sidebar.multiselect( "Selecione a raça/cor:",
+                                         options=df["paciente_racacor_valor"].unique(),
+                                         default=df["paciente_racacor_valor"].unique())
+
+    min_idade = int(df["paciente_idade"].min())
+    max_idade = int(df["paciente_idade"].max())
+    fil_idade = st.sidebar.slider( "Selecione o intervalo de idades",
+                                    min_value=min_idade,
+                                    max_value=max_idade,
+                                    value=(min_idade, max_idade) )
+
+
+    df_selection = df.query( "@fil_dose == nova_dose & "
+                             "@fil_vacina == vacina_nome" )
+                             #"@fil_sex == paciente_enumsexobiologico &"
+                             #"@fil_raca == paciente_racacor_valor &"
+                             #"@fil_idade == paciente_idade"
+
 
     return df_selection
 
@@ -177,6 +213,7 @@ def pie_ind_popvac( df_selection ):
     fig3 = go.Figure(data=[go.Pie(labels=labels2,
                                   values=[vacinados_1dose, pop_sem_1dose],
                                   textinfo='percent', textfont_size=20,
+                                  showlegend=False,
                                   marker=dict(colors=colors2,
                                               line=dict(color='#000010', width=2)))])
     fig3.update_traces(hole=.4, hoverinfo="label+percent+value")
@@ -194,6 +231,7 @@ def pie_ind_popvac( df_selection ):
     fig4 = go.Figure(data=[go.Pie(labels=labels3,
                                   values=[vacinados_completo, pop_sem_2dose],
                                   textinfo='percent', textfont_size=20,
+                                  showlegend=False,
                                   marker=dict(colors=colors3,
                                               line=dict(color=' #000010', width=2)))])
     fig4.update_traces(hole=.4, hoverinfo="label+percent+value")
@@ -636,12 +674,13 @@ def bar_line_cor( df_selection ):
 
     return None
 
-def bar2_faixa( df_selection ):
+
 # 2.3 - Análise da Faixa Etaria da População Vacinada em Florianópolis/SC
+def bar2_faixa(df_selection):
     st.subheader("2.3 - Análise da Faixa Etaria da População Vacinada em Florianópolis/SC")
 
-# 2.3 - DECLARAÇÂO DE VARIAVEIS GERAIS ------------------------------------
-# 2.1B - Distribuição da Idade dos Vacinados por Raça/Cor e Sexo Biológico - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
+    # 2.3 - DECLARAÇÂO DE VARIAVEIS GERAIS ------------------------------------
+    # 2.1B - Distribuição da Idade dos Vacinados por Raça/Cor e Sexo Biológico - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
 
     dados = df_selection.drop_duplicates(subset=['paciente_id'], keep="last")
 
@@ -662,35 +701,36 @@ def bar2_faixa( df_selection ):
 
     df = dados.groupby(['faixa_etaria']).sum().reset_index()
 
-# 2.3A - Faixa Etaria da População Residente e População Vacinada - DECLARAÇÂO DE VARIAVEIS ------------------------------------
+    # 2.3A - Faixa Etaria da População Residente e População Vacinada - DECLARAÇÂO DE VARIAVEIS ------------------------------------
     values = ['menos 19 anos', '20 a 39 anos', '40 a 59 anos', '60 a 79 anos', 'mais 80 anos']
 
     y_1dose = [df['1° Dose'][4], df['1° Dose'][0], df['1° Dose'][1], df['1° Dose'][2], df['1° Dose'][3]]
     y_2dose = [df['2° Dose'][4], df['2° Dose'][0], df['2° Dose'][1], df['2° Dose'][2], df['2° Dose'][3]]
-    y_Udose = [df['Dose Única'][4], df['Dose Única'][0], df['Dose Única'][1], df['Dose Única'][2], df['Dose Única'][3]]
+    y_Udose = [df['Dose Única'][4], df['Dose Única'][0], df['Dose Única'][1], df['Dose Única'][2],
+               df['Dose Única'][3]]
     y_Adose = [df['Dose Adicional'][4], df['Dose Adicional'][0], df['Dose Adicional'][1], df['Dose Adicional'][2],
                df['Dose Adicional'][3]]
 
-# 2.3A - Faixa Etaria da População Residente e População Vacinada - DECLARAÇÂO DE VARIAVEIS ------------------------------------
+    # 2.3A - Faixa Etaria da População Residente e População Vacinada - DECLARAÇÂO DE VARIAVEIS ------------------------------------
     valuesf = ['menos 19 anos', '20 a 39 anos', '40 a 59 anos', '60 a 79 anos', 'mais 80 anos']
     y_pop = [132402, 191059, 133686, 51058, 8319]
     y_vac = [df['menos 19 anos'][4], df['20 a 39 anos'][0], df['40 a 59 anos'][1],
              df['60 a 79 anos'][2], df['mais 80 anos'][3]]
 
-# 2.3A - Faixa Etaria da População Residente e População Vacinada - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
+    # 2.3A - Faixa Etaria da População Residente e População Vacinada - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
     fig2 = go.Figure()
     fig2.add_trace(go.Bar(name='1° Dose', x=values, y=y_1dose,
-                         text=y_pop, textposition='outside',
-                         marker_color=['#4169E1', '#4169E1', '#4169E1', '#4169E1', '#4169E1']))
+                          text=y_pop, textposition='outside',
+                          marker_color=['#4169E1', '#4169E1', '#4169E1', '#4169E1', '#4169E1']))
     fig2.add_trace(go.Bar(name='2° Dose', x=values, y=y_2dose,
-                         text=y_vac, textposition='outside',
-                         marker_color=['#D70270', '#D70270', '#D70270', '#D70270', '#D70270']))
+                          text=y_vac, textposition='outside',
+                          marker_color=['#D70270', '#D70270', '#D70270', '#D70270', '#D70270']))
     fig2.add_trace(go.Bar(name='Dose Única', x=values, y=y_Udose,
-                         text=y_vac, textposition='outside',
-                         marker_color=['#4B0082', '#4B0082', '#4B0082', '#4B0082', '#4B0082']))
+                          text=y_vac, textposition='outside',
+                          marker_color=['#4B0082', '#4B0082', '#4B0082', '#4B0082', '#4B0082']))
     fig2.add_trace(go.Bar(name='Dose Adicional', x=values, y=y_Adose,
-                         text=y_vac, textposition='outside',
-                         marker_color=['#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF']))
+                          text=y_vac, textposition='outside',
+                          marker_color=['#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF']))
     fig2.update_layout(
         title="2.2B - Doses Aplicada em cada Faixa Etaria:",
         title_font_size=22, legend_font_size=16,
@@ -699,23 +739,23 @@ def bar2_faixa( df_selection ):
     fig2.update_xaxes(
         title_text='Faixa Etaria',
         title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
+        tickfont=dict(family='Sans-serif', size=12))
     fig2.update_yaxes(
         title_text="Número de Doses Aplicadas",
         title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
+        tickfont=dict(family='Sans-serif', size=12))
     st.plotly_chart(fig2, use_container_width=True)
 
-# 2.3A - Faixa Etaria da População Residente e População Vacinada - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
+    # 2.3A - Faixa Etaria da População Residente e População Vacinada - PLOTAGEM GRÀFICO DE BARRA - --------------------------------------------------------------
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(name='População Residente*',
                           x=valuesf, y=y_pop,
                           text=y_pop, textposition='outside',
-                          marker_color=['#4169E1','#4169E1', '#4169E1','#4169E1','#4169E1']))
+                          marker_color=['#4169E1', '#4169E1', '#4169E1', '#4169E1', '#4169E1']))
     fig1.add_trace(go.Bar(name='Vacinados Alguma Dose',
                           x=values, y=y_vac,
                           text=y_vac, textposition='outside',
-                          marker_color=['#D70270','#D70270','#D70270','#D70270','#D70270']))
+                          marker_color=['#D70270', '#D70270', '#D70270', '#D70270', '#D70270']))
     fig1.update_layout(
         title="2.3A - Faixa Etária da População Residente e População Vacinada :",
         title_font_size=22, legend_font_size=16,
@@ -724,11 +764,11 @@ def bar2_faixa( df_selection ):
     fig1.update_xaxes(
         title_text='Faixa Etária',
         title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
+        tickfont=dict(family='Sans-serif', size=12))
     fig1.update_yaxes(
         title_text="Número de Residentes/Vacinados",
         title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
+        tickfont=dict(family='Sans-serif', size=12))
     st.plotly_chart(fig1, use_container_width=True)
     st.markdown("""---""")
 
@@ -753,9 +793,9 @@ if __name__ == "__main__":
     df = get_data_vac( path_vac )
 
     # Transformation -----------------
-    df_selection = set_feature( df )
+    df = set_feature( df )
 
-    df_selection = filtro_geral( df_selection )
+    df_selection = filtro_geral( df )
 
 
     overview_data( df_selection )
