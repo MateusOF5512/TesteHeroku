@@ -778,8 +778,9 @@ def bar2_faixa(df_selection):
 
 def notas( df_selection  ):
     st.subheader("Links Importantes:")
-    st.markdown("""**Dados sobre o CENSO IBGE 2010**: https://cidades.ibge.gov.br/brasil/sc/florianopolis/pesquisa/23/24304?indicador=29455""")
-    st.markdown("""**Dados sobre a Campanha de Vacinação**: https://opendatasus.saude.gov.br/dataset/covid-19-vacinacao""")
+    st.markdown("""[Código Aberto no Github](https://github.com/MateusOF5512/TesteHeroku)""")
+    st.markdown("""[Dados sobre o CENSO IBGE 2010](https://cidades.ibge.gov.br/brasil/sc/florianopolis/pesquisa/23/24304?indicador=29455)""")
+    st.markdown("""[Dados sobre a Campanha de Vacinação Contra Covid-19](https://opendatasus.saude.gov.br/dataset/covid-19-vacinacao)""")
 
     return None
 
