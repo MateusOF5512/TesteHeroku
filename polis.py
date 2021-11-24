@@ -12,7 +12,6 @@ import plotly.graph_objects as go
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/
 st.set_page_config(page_title="ODA", page_icon=":eyes:", layout="wide")
 
-
 @st.cache(allow_output_mutation=True)
 def get_data_vac( path_vac ):
     df = pd.read_csv( path_vac, sep=",", encoding="ISO-8859-1" )
@@ -43,6 +42,7 @@ def set_feature( df ):
     df_selection= df
 
     return df_selection
+
 
 # --------------------------------------------------------------- TOP ----
 def overview_data( df_selection ):
@@ -212,6 +212,12 @@ def temp_dose( df_selection ):
         with see_data:
             st.dataframe(data=df_new)
 
+#------------------- FILTRO
+    fil_dose = st.multiselect( "Escolha as Doses:",
+                                       options=df["nova_dose"].unique(),
+                                       default=df["nova_dose"].unique() )
+    df_selection = df_selection.query( "nova_dose == @fil_dose" )
+
 # ------------------- PREPARAÇÂO DOS DADOS - 1.2A - Variação Mensal da Aplicação das Doses:
     df_line = df_selection.groupby(['meses_aplicacao']).sum().reset_index()
 
@@ -308,95 +314,10 @@ def temp_dose( df_selection ):
 
     st.markdown("""---""")
 
-    return None
+    return df_selection
 
 # 1.3 - Análise das Vacinas Aplicadas -----------------------------------------------------------
-def bar_fun_vacina( df_selection ):
-    st.subheader("1.3 - Análise das Vacinas Aplicadas")
 
-# 1.3 - Análise das Vacinas Aplicadas - APRESENTAÇÂO DOS DADOS ---------------------------------------------
-    row_spacer1, row_1, row_spacer2 = st.columns((.2, 7.1, .2))
-    df_filter = df_selection.drop(['paciente_idade', 'meses_aplicacao',
-                         '1° Dose', '2° Dose', 'Dose Única', 'Dose Adicional',
-                         'Feminino', 'Masculino',
-                         'BRANCA', 'PRETA', 'PARDA', 'AMARELA', 'INDIGENA', 'SEM INFORMACAO',
-                         ], axis=1)
-    df_new = df_filter.groupby(['nova_dose']).sum().reset_index()
-    with row_1:
-        st.markdown("")
-        see_data = st.expander('1.3 - Click para ver os Dados!')
-        with see_data:
-            st.dataframe(data=df_new)
-
-    df1 = df_selection[["nova_dose", "AstraZeneca", "Pfizer", "Coronavac", "Janssen"]]
-    df = df1.groupby(['nova_dose']).sum().reset_index()
-
-    values = ['1° Dose', '2° Dose', 'Dose Única', 'Dose Adicional']
-    y_Pfizer = [df['Pfizer'][0], df['Pfizer'][1], df['Pfizer'][3], df['Pfizer'][2]]
-    y_AstraZeneca = [df['AstraZeneca'][0], df['AstraZeneca'][1], df['AstraZeneca'][3], df['AstraZeneca'][2]]
-    y_Coronavac = [df['Coronavac'][0], df['Coronavac'][1], df['Coronavac'][3], df['Coronavac'][2]]
-    y_Janssen = [df['Janssen'][0], df['Janssen'][1], df['Janssen'][3], df['Janssen'][2]]
-
-# 1.3A - Vacinas Aplicadas por Dose - PLOTAGEM GRÀFICO DE BARRA -----------------------------------------
-    fig1 = go.Figure()
-    fig1.add_trace(go.Bar(name='AstraZeneca', x=values, y=y_AstraZeneca,
-                         text=y_AstraZeneca, textposition='auto',
-                         marker_color=['#D70270', '#D70270', '#D70270', '#D70270', '#D70270'])) #magenta
-    fig1.add_trace(go.Bar(name='Pfizer', x=values, y=y_Pfizer,
-                         text=y_Pfizer, textposition='auto',
-                         marker_color=['#4169E1', '#4169E1', '#4169E1', '#4169E1', '#4169E1'])) #royalazul
-    fig1.add_trace(go.Bar(name='Coronavac', x=values, y=y_Coronavac,
-                         text=y_Coronavac, textposition='auto',
-                         marker_color=['#8A2BE2', '#8A2BE2', '#8A2BE2', '#8A2BE2', '#8A2BE2'])) #Purple
-    fig1.add_trace(go.Bar(name='Janssen', x=values, y=y_Janssen,
-                         text=y_Janssen, textposition='auto',
-                         marker_color=['#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF', '#00FFFF']))
-    fig1.update_layout(
-        title="1.3A - Vacinas Aplicadas por Dose:",
-        title_font_size=22, legend_font_size=16,
-        template="plotly_dark",
-        height=520,
-        barmode='stack')
-    fig1.update_xaxes(
-        title_text='Doses Aplicadas',
-        title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
-    fig1.update_yaxes(
-        title_text="Número de Vacinados",
-        title_font=dict(family='Sans-serif', size=16),
-        tickfont  =dict(family='Sans-serif', size=12))
-    st.plotly_chart(fig1, use_container_width=True)
-
-# PREPARAÇÂO DOS DADOS - 1.3B - Vacinas Aplicadas por Dose: -------------------------------------
-    y_Pfizer = int(df_selection['Pfizer'].sum())
-    y_Coronavac = int(df_selection['Coronavac'].sum())
-    y_Janssen = int(df_selection['Janssen'].sum())
-    y_AstraZeneca = int(df_selection['AstraZeneca'].sum())
-
-    values = [ "AstraZeneca", "Pfizer", "Coronavac", "Janssen",]
-    y = [ y_AstraZeneca, y_Pfizer, y_Coronavac, y_Janssen,]
-
-# ------------------- PLOTAGEM GRÀFICO DE BARRA - 1.3B - Proporção das Vacinas Aplicadas:
-    fig2 = go.Figure()
-    fig2.add_trace(go.Funnel(
-        y=values, x=y,
-        textposition="inside",
-        textinfo="value+percent total",
-        opacity=1, marker={"color": ["#D70270", "#4169E1", "#8A2BE2", "#00FFFF", "#ADFF2F"],
-                           "line": {"width": [2, 2, 2, 2, 2, 2],
-                                    "color": ["black", "black", "black", "black", "black"]}},
-        connector={"line": {"color": "black", "dash": "solid", "width": 2}}))
-    fig2.update_layout(
-        title="1.3B - Proporção das Vacinas Aplicadas:",
-        title_font_size=22,
-        template="plotly_dark",
-        height=520)
-    fig2.update_yaxes(
-        tickfont=dict(family='Sans-serif', size=16))
-    st.plotly_chart(fig2, use_container_width=True)
-    st.markdown("""---""")
-
-    return None
 
 # 1.4 - Análise Temporal das Vacinas Aplicadas -------------------------------
 
@@ -827,9 +748,9 @@ if __name__ == "__main__":
 
     pie_ind_popvac( df_selection )
 
-    temp_dose( df_selection )
+    df_selection = temp_dose( df_selection )
 
-    bar_fun_vacina( df_selection )
+    #bar_fun_vacina( df_selection )
 
     line_temp_vacina( df_selection )
 
