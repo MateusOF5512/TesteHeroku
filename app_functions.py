@@ -274,7 +274,7 @@ def campanha1( df_selection ):
         df_new['Imunizacao'] = np.select(conditions, values)
 
         df_new = df_new[["paciente_id", "Total Doses",
-                         "1° Dose", "2° Dose", "Dose Única", "Dose Adicional", "Imunizacao",
+                         "1° Dose", "2° Dose", "Dose Única", "Dose Adicional",
                          "AstraZeneca", "Pfizer", "Coronavac", "Janssen",
                          ]]
         df_new.columns = ["Identificador Paciente", "Total Doses",
